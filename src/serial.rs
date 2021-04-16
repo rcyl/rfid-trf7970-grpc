@@ -3,12 +3,7 @@ use mockall::automock;
 
 use serialport::{SerialPortInfo, SerialPortSettings};
 use serialport::prelude::*;
-
 use std::io::{Write, BufRead, BufReader};
-use std::time::Duration;
-use std::sync::Mutex;
-
-static SERIAL_TIMEOUT_MS: u64 = 2000;
 
 /* for mocking of open serial functions */
 #[cfg_attr(test, automock)]
@@ -24,13 +19,13 @@ pub trait SerialCrateTraits: Send + Sync {
 
 pub struct SerialCrate {}
 
-impl SerialCrate {
+impl dyn SerialCrateTraits {
     pub fn new() -> SerialCrate {
         SerialCrate {}
     }
 }
 
-impl SerialCrateTraits for MySerialCrate {
+impl SerialCrateTraits for SerialCrate {
     
     fn get_ports(&self) -> Result<Vec<SerialPortInfo>, serialport::Error> {
         return serialport::available_ports();
@@ -59,16 +54,3 @@ impl SerialCrateTraits for MySerialCrate {
     }
 }
 
-#[cfg_attr(test, automock)]
-pub trait PLCSerialTraits: Send + Sync {
-    /* send and expect ack in the form of OK */
-    fn send_ack(&mut self, msg: &str) -> Result<(), PLCError>; 
-    
-    /* just send without expecting ACK */
-    fn send_nack(&mut self, msg: &str) -> Result<String, PLCError>;
-}
-
-pub struct PLCSerial {
-    port: Mutex<Box <dyn SerialPort>>,
-    lib: Mutex<Box<dyn SerialCrateTraits>>
-}
