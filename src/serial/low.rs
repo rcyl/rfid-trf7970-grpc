@@ -28,7 +28,7 @@ impl SerialCrate {
 
 impl SerialCrateTraits for SerialCrate {
     fn get_ports(&self) -> Result<Vec<SerialPortInfo>, serialport::Error> {
-        return serialport::available_ports();
+        serialport::available_ports()
     }
 
     fn open(
@@ -36,13 +36,13 @@ impl SerialCrateTraits for SerialCrate {
         path: &str,
         settings: &SerialPortSettings,
     ) -> Result<Box<dyn SerialPort>, serialport::Error> {
-        return serialport::open_with_settings(path, settings);
+        serialport::open_with_settings(path, settings)
     }
 
     fn send(&self, msg: &str, device: &mut Box<dyn SerialPort>) -> Result<String, std::io::Error> {
         let cmd = msg.as_bytes();
         device.write_all(cmd)?;
-        return self.read(device);
+        self.read(device)
     }
 
     fn read(&self, device: &mut Box<dyn SerialPort>) -> Result<String, std::io::Error> {

@@ -102,7 +102,7 @@ impl RFIDSerial {
         /* let the program panic if lock fails */
         let lib = self.lib.lock().unwrap();
         let mut port = self.port.lock().unwrap();
-        return lib.send(&msg, &mut port);
+        lib.send(&msg, &mut port)
     }
 }
 
