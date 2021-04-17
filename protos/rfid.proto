@@ -2,8 +2,8 @@ syntax = "proto3";
 
 package rfid;
 
-service Read {
-    rpc ReadUUID(Empty) returns (Empty) {}
+service ReadInfo {
+    rpc ReadUUID(Empty) returns (UUIDPayload) {}
     rpc ReadSingleBlock(SingleBlockRequest) returns (DataPayload) {} 
     rpc ReadUUIDContinous(stream StreamPayload) returns (stream UUIDPayload) {}
     rpc ReadBlockContinous(stream StreamPayload) returns (stream DataPayload) {}
