@@ -31,13 +31,13 @@ macro_rules! get_reader_async {
 
 type Result<T> = std::result::Result<T, Status>;
 
-pub struct RFID {
+pub struct Rfid {
     reader: Arc<Mutex<Box<dyn ReaderTraits>>>,
 }
 
-impl RFID {
-    pub fn new(reader: Box<dyn ReaderTraits>) -> RFID {
-        RFID {
+impl Rfid {
+    pub fn new(reader: Box<dyn ReaderTraits>) -> Rfid {
+        Rfid {
             reader: Arc::new(Mutex::new(reader)),
         }
     }
@@ -73,8 +73,8 @@ pub async fn get_client_message(
 }
 
 #[tonic::async_trait]
-impl ReadInfo for RFID {
-    type ReadUUIDContinousStream = mpsc::Receiver<Result<Payload>>;
+impl ReadInfo for Rfid {
+    type ReadUuidContinousStream = mpsc::Receiver<Result<Payload>>;
     type ReadBlockContinousStream = mpsc::Receiver<Result<Payload>>;
 
     async fn read_uuid(&self, _request: Request<Empty>) -> Result<Response<Payload>> {
@@ -102,7 +102,7 @@ impl ReadInfo for RFID {
     async fn read_uuid_continous(
         &self,
         mut request: Request<Streaming<StreamPayload>>,
-    ) -> Result<Response<Self::ReadUUIDContinousStream>> {
+    ) -> Result<Response<Self::ReadUuidContinousStream>> {
         let (mut tx, rx): (Sender<Result<Payload>>, Receiver<Result<Payload>>) =
             mpsc::channel(MPSC_BUFFER_SIZE);
 
@@ -193,7 +193,7 @@ mod test {
             ))
         });
 
-        let rfid = RFID::new(Box::new(reader));
+        let rfid = Rfid::new(Box::new(reader));
 
         let ts = TestStruct::new(rfid).await;
         let mut client = start_client().await;
@@ -215,7 +215,7 @@ mod test {
             .expect_read_uuid()
             .returning(|| Ok(String::from("CAFEDEADBEEFB0B0")));
 
-        let rfid = RFID::new(Box::new(reader));
+        let rfid = Rfid::new(Box::new(reader));
 
         let ts = TestStruct::new(rfid).await;
         let mut client = start_client().await;
@@ -242,7 +242,7 @@ mod test {
                 ))
             });
 
-        let rfid = RFID::new(Box::new(reader));
+        let rfid = Rfid::new(Box::new(reader));
 
         let ts = TestStruct::new(rfid).await;
         let mut client = start_client().await;
@@ -272,7 +272,7 @@ mod test {
             .with(eq(block_idx))
             .returning(|_| Ok(String::from("12345678")));
 
-        let rfid = RFID::new(Box::new(reader));
+        let rfid = Rfid::new(Box::new(reader));
 
         let ts = TestStruct::new(rfid).await;
         let mut client = start_client().await;
@@ -312,7 +312,7 @@ mod test {
                 .returning(move || Ok(rstr.clone()));
         }
 
-        let rfid = RFID::new(Box::new(reader));
+        let rfid = Rfid::new(Box::new(reader));
 
         let ts = TestStruct::new(rfid).await;
         let mut client = start_client().await;
@@ -358,7 +358,7 @@ mod test {
     async fn read_uuid_unknown_action_at_start() {
         let reader = MockReaderTraits::new();
 
-        let rfid = RFID::new(Box::new(reader));
+        let rfid = Rfid::new(Box::new(reader));
 
         let ts = TestStruct::new(rfid).await;
         let mut client = start_client().await;
@@ -395,7 +395,7 @@ mod test {
     #[serial]
     async fn read_uuid_cancelled_at_start() {
         let reader = MockReaderTraits::new();
-        let rfid = RFID::new(Box::new(reader));
+        let rfid = Rfid::new(Box::new(reader));
 
         let ts = TestStruct::new(rfid).await;
         let mut client = start_client().await;
@@ -451,7 +451,7 @@ mod test {
                 .returning(move || Ok(rstr.clone()));
         }
 
-        let rfid = RFID::new(Box::new(reader));
+        let rfid = Rfid::new(Box::new(reader));
 
         let ts = TestStruct::new(rfid).await;
         let mut client = start_client().await;

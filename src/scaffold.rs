@@ -3,7 +3,7 @@ pub mod scaffold {
 
     use crate::include::read_info_client::ReadInfoClient;
     use crate::include::read_info_server::ReadInfoServer;
-    use crate::rfid::RFID;
+    use crate::rfid::Rfid;
     use futures_util::FutureExt;
     use std::time::Duration;
     use tokio::sync::oneshot;
@@ -18,7 +18,7 @@ pub mod scaffold {
     }
 
     impl TestStruct {
-        pub async fn new(rfid: RFID) -> TestStruct {
+        pub async fn new(rfid: Rfid) -> TestStruct {
             let (tx, rx) = oneshot::channel::<()>();
             let jh = start_server(rfid, rx).await;
 
@@ -33,7 +33,7 @@ pub mod scaffold {
 
     /* the one shot channel is just used to terminate the server after
     one call by dropping rx*/
-    pub async fn start_server(rfid: RFID, rx: oneshot::Receiver<()>) -> JoinHandle<()> {
+    pub async fn start_server(rfid: Rfid, rx: oneshot::Receiver<()>) -> JoinHandle<()> {
         tokio::spawn(async move {
             let addr = "[::]:50051".parse().unwrap();
             Server::builder()

@@ -4,7 +4,7 @@ use mockall::automock;
 use regex::Regex;
 
 use crate::serial::err::SerialError;
-use crate::serial::RFIDSerialTraits;
+use crate::serial::RfidSerialTraits;
 
 pub mod constants;
 pub mod err;
@@ -31,7 +31,7 @@ pub trait ReaderTraits: Send + Sync {
 }
 
 pub struct Reader {
-    serial: Box<dyn RFIDSerialTraits>,
+    serial: Box<dyn RfidSerialTraits>,
 }
 
 impl ReaderTraits for Reader {
@@ -104,7 +104,7 @@ fn reverse_uuid(uuid: &str) -> String {
 }
 
 impl Reader {
-    pub fn new(serial: Box<dyn RFIDSerialTraits>) -> Reader {
+    pub fn new(serial: Box<dyn RfidSerialTraits>) -> Reader {
         let mut reader = Reader { serial };
 
         if let Err(e) = reader.initialize() {
@@ -121,7 +121,7 @@ impl Reader {
     }
 
     //send a command, and check whether output matches any of the regex
-    fn send_read_regex(&mut self, cmd: &str, regex: &Vec<&str>) -> Result<String, ReaderError> {
+    fn send_read_regex(&mut self, cmd: &str, regex: &[&str]) -> Result<String, ReaderError> {
         let read = self.serial.send_recv(cmd)?;
 
         for r in regex.iter() {
@@ -150,27 +150,27 @@ impl Reader {
     }
 
     fn set_iso(&mut self) -> Result<(), ReaderError> {
-        self.send_read_regex(ISO, &vec![ISO_RES])?;
+        self.send_read_regex(ISO, &[ISO_RES])?;
         Ok(())
     }
 
     fn set_half_data(&mut self) -> Result<(), ReaderError> {
-        self.send_read_regex(RF_HALF_DATA, &vec![RF_HALF_DATA_RES])?;
+        self.send_read_regex(RF_HALF_DATA, &[RF_HALF_DATA_RES])?;
         Ok(())
     }
 
     fn set_agc(&mut self) -> Result<(), ReaderError> {
-        self.send_read_regex(AGC, &vec![AGC_RES, AGC_RES_2])?;
+        self.send_read_regex(AGC, &[AGC_RES, AGC_RES_2])?;
         Ok(())
     }
 
     fn set_am(&mut self) -> Result<(), ReaderError> {
-        self.send_read_regex(AM, &vec![AM_RES, AM_RES_2])?;
+        self.send_read_regex(AM, &[AM_RES, AM_RES_2])?;
         Ok(())
     }
 
     fn set_antenna(&mut self) -> Result<(), ReaderError> {
-        self.send_read_regex(EXT_ANT, &vec![EXT_ANT_RES])?;
+        self.send_read_regex(EXT_ANT, &[EXT_ANT_RES])?;
         Ok(())
     }
 }
@@ -178,7 +178,7 @@ impl Reader {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::serial::MockRFIDSerialTraits;
+    use crate::serial::MockRfidSerialTraits;
     use mockall::predicate::eq;
 
     mod init {
@@ -187,7 +187,7 @@ mod test {
         #[test]
         #[should_panic(expected = "Serial device did not respond to read request")]
         fn serial_port_error() {
-            let mut serial = MockRFIDSerialTraits::new();
+            let mut serial = MockRfidSerialTraits::new();
             serial
                 .expect_send_recv()
                 .with(eq(ISO))
@@ -198,7 +198,7 @@ mod test {
         #[test]
         #[should_panic(expected = "Targets not found")]
         fn mismatch_output() {
-            let mut serial = MockRFIDSerialTraits::new();
+            let mut serial = MockRfidSerialTraits::new();
             serial
                 .expect_send_recv()
                 .with(eq(ISO))
@@ -209,7 +209,7 @@ mod test {
         //tests whether reader can initialize even with the alternate reply for agc
         #[test]
         fn agc_res_two_ok() {
-            let mut serial = MockRFIDSerialTraits::new();
+            let mut serial = MockRfidSerialTraits::new();
             serial
                 .expect_send_recv()
                 .with(eq(ISO))
@@ -236,7 +236,7 @@ mod test {
         //tests whether reader can initialize even with the alternate reply for am
         #[test]
         fn am_res_two_ok() {
-            let mut serial = MockRFIDSerialTraits::new();
+            let mut serial = MockRfidSerialTraits::new();
             serial
                 .expect_send_recv()
                 .with(eq(ISO))
@@ -262,7 +262,7 @@ mod test {
 
         #[test]
         fn init_ok() {
-            let mut serial = MockRFIDSerialTraits::new();
+            let mut serial = MockRfidSerialTraits::new();
             serial
                 .expect_send_recv()
                 .with(eq(ISO))
@@ -401,7 +401,7 @@ mod test {
     }
 
     //test fixture to setup device for other tests besides init
-    fn init_helper(serial: &mut MockRFIDSerialTraits) {
+    fn init_helper(serial: &mut MockRfidSerialTraits) {
         serial
             .expect_send_recv()
             .with(eq(ISO))
@@ -428,7 +428,7 @@ mod test {
         use super::*;
         #[test]
         fn non_matching() {
-            let mut serial = MockRFIDSerialTraits::new();
+            let mut serial = MockRfidSerialTraits::new();
             init_helper(&mut serial);
             serial
                 .expect_send_recv()
@@ -448,7 +448,7 @@ mod test {
 
         #[test]
         fn serial_error() {
-            let mut serial = MockRFIDSerialTraits::new();
+            let mut serial = MockRfidSerialTraits::new();
             init_helper(&mut serial);
             serial
                 .expect_send_recv()
@@ -468,7 +468,7 @@ mod test {
 
         #[test]
         fn matching() {
-            let mut serial = MockRFIDSerialTraits::new();
+            let mut serial = MockRfidSerialTraits::new();
             init_helper(&mut serial);
             serial
                 .expect_send_recv()
@@ -482,7 +482,7 @@ mod test {
 
         #[test]
         fn chars_in_front_matching() {
-            let mut serial = MockRFIDSerialTraits::new();
+            let mut serial = MockRfidSerialTraits::new();
             init_helper(&mut serial);
             serial
                 .expect_send_recv()
@@ -496,7 +496,7 @@ mod test {
 
         #[test]
         fn chars_at_the_back_matching() {
-            let mut serial = MockRFIDSerialTraits::new();
+            let mut serial = MockRfidSerialTraits::new();
             init_helper(&mut serial);
             serial
                 .expect_send_recv()
@@ -510,7 +510,7 @@ mod test {
 
         #[test]
         fn chars_at_the_front_and_back_matching() {
-            let mut serial = MockRFIDSerialTraits::new();
+            let mut serial = MockRfidSerialTraits::new();
             init_helper(&mut serial);
             serial
                 .expect_send_recv()
@@ -531,7 +531,7 @@ mod test {
         fn serial_error_on_data_call() {
             let expected_cmd = "0113000304182220CAFEDEADBEEFB0E0FF0000";
 
-            let mut serial = MockRFIDSerialTraits::new();
+            let mut serial = MockRfidSerialTraits::new();
             init_helper(&mut serial);
 
             serial
@@ -560,7 +560,7 @@ mod test {
         fn non_matching_uuid_on_data_call() {
             let expected_cmd = "0113000304182220CAFEDEADBEEFB0E0FF0000";
 
-            let mut serial = MockRFIDSerialTraits::new();
+            let mut serial = MockRfidSerialTraits::new();
             init_helper(&mut serial);
 
             serial
@@ -589,7 +589,7 @@ mod test {
         fn non_matching_data_on_data_calll() {
             let expected_cmd = "0113000304182220CAFEDEADBEEFB0E0FF0000";
 
-            let mut serial = MockRFIDSerialTraits::new();
+            let mut serial = MockRfidSerialTraits::new();
             init_helper(&mut serial);
 
             serial
@@ -618,7 +618,7 @@ mod test {
         fn ok() {
             let expected_cmd = "0113000304182220CAFEDEADBEEFB0E0FF0000";
 
-            let mut serial = MockRFIDSerialTraits::new();
+            let mut serial = MockRfidSerialTraits::new();
             init_helper(&mut serial);
 
             serial
