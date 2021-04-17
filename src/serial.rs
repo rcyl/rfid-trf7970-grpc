@@ -8,7 +8,7 @@ use std::time::Duration;
 use std::sync::Mutex;
 
 pub mod err;
-mod low;
+pub mod low;
 
 use err::SerialError;
 use low::SerialCrateTraits;

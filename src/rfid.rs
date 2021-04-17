@@ -117,6 +117,7 @@ impl ReadInfo for RFID {
         }
     }
 
+    //bi-directional stream, wait for user to ack for after every read
     async fn read_uuid_continous(&self, mut request: Request<Streaming<StreamPayload>>)
         -> Result<Response<Self::ReadUUIDContinousStream>> {
         
@@ -134,10 +135,14 @@ impl ReadInfo for RFID {
 
                         match message.action {
                             act if act == ClientActions::Cancel as i32 => {
-                                return Err(Status::cancelled("Cancelled by user"))
+                                let e = Status::cancelled("Cancelled by user");
+                                log::error!("{}", e.to_string());
+                                return Err(e)
                             },
                             act if act == ClientActions::Unknown as i32 => {
-                                return Err(Status::invalid_argument("Unknown user action"))
+                                let e = Status::invalid_argument("Unknown user action");
+                                log::error!("{}", e.to_string());
+                                return Err(e)
                             },
                             _ => { }
                         }
@@ -178,4 +183,14 @@ impl ReadInfo for RFID {
     
         Err(Status::invalid_argument("123"))
     }
+}
+
+#[cfg(test)]
+mod test {
+
+    use mockall::{mock, predicate::eq, Sequence};
+    use crate::rfid::MockReaderTraits;
+    use super::*;
+    
+
 }
