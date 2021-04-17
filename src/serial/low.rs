@@ -25,14 +25,6 @@ impl SerialCrate {
     }
 }
 
-impl dyn SerialCrateTraits {
-    pub fn new() -> SerialCrate {
-        SerialCrate {}
-    }
-}
-
-
-
 impl SerialCrateTraits for SerialCrate {
     
     fn get_ports(&self) -> Result<Vec<SerialPortInfo>, serialport::Error> {

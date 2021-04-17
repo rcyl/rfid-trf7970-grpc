@@ -8,7 +8,7 @@ use super::include:: {
 use std::sync::Arc;
 use std::time::Duration;
 
-use futures::lock::{Mutex, MutexGuard};
+use futures::lock::Mutex;
 use super::reader::ReaderTraits;
 
 const MPSC_BUFFER_SIZE: usize = 0xFFFF;
@@ -56,7 +56,7 @@ pub async fn get_client_message(request: &mut Streaming<StreamPayload>, timeout_
     let delayer = async {
         match request.message().await {
             Ok(payload) => {
-                match (payload) {
+                match payload {
                     Some(msg) => { Ok(msg) },
                     None => {
                         Err(Status::invalid_argument("No message from client"))
@@ -137,12 +137,18 @@ impl ReadInfo for RFID {
                             act if act == ClientActions::Cancel as i32 => {
                                 let e = Status::cancelled("Cancelled by user");
                                 log::error!("{}", e.to_string());
-                                return Err(e)
+                                if let Err(send_err) = tx.send(Err(e)).await {
+                                    log::error!("{}", send_err.to_string());
+                                }
+                                break;
                             },
                             act if act == ClientActions::Unknown as i32 => {
                                 let e = Status::invalid_argument("Unknown user action");
                                 log::error!("{}", e.to_string());
-                                return Err(e)
+                                if let Err(send_err) = tx.send(Err(e)).await {
+                                    log::error!("{}", send_err.to_string());
+                                }
+                                break;
                             },
                             _ => { }
                         }
@@ -151,7 +157,6 @@ impl ReadInfo for RFID {
                         if let Err(err) = tx.send(Err(e)).await {
                             log::error!("{}", err.to_string());
                         }
-                        //TODO: figure out a way to copy and return the error
                         break;
                     }
                 }
@@ -178,9 +183,10 @@ impl ReadInfo for RFID {
         Ok(Response::new(rx))
     }
 
-    async fn read_block_continous(&self, request: Request<Streaming<StreamPayload>>)
+    async fn read_block_continous(&self, _request: Request<Streaming<StreamPayload>>)
         -> Result<Response<Self::ReadBlockContinousStream>> {
-    
+        
+        //TODO: will be similar to the read uuid continous version
         Err(Status::invalid_argument("123"))
     }
 }
@@ -188,7 +194,7 @@ impl ReadInfo for RFID {
 #[cfg(test)]
 mod test {
 
-    use mockall::{mock, predicate::eq, Sequence};
+    use mockall::{predicate::eq, Sequence};
     use rand::{thread_rng, Rng};
     use rand::distributions::Alphanumeric;
     use crate::reader::MockReaderTraits;
@@ -213,7 +219,7 @@ mod test {
         let ts = TestStruct::new(rfid).await;
         let mut client = start_client().await;
 
-        let mut res = client.read_uuid(Request::new(Empty{})).await;
+        let res = client.read_uuid(Request::new(Empty{})).await;
         ts.end().await;
 
         match res {
@@ -236,7 +242,7 @@ mod test {
         let ts = TestStruct::new(rfid).await;
         let mut client = start_client().await;
 
-        let mut res = client.read_uuid(Request::new(Empty{})).await;
+        let res = client.read_uuid(Request::new(Empty{})).await;
         ts.end().await;
 
         assert!(!res.is_err());
@@ -259,7 +265,7 @@ mod test {
         let ts = TestStruct::new(rfid).await;
         let mut client = start_client().await;
 
-        let mut res = client.read_single_block(
+        let res = client.read_single_block(
             Request::new(SingleBlockRequest{
                 block_index: block_idx
             })).await;
@@ -288,7 +294,7 @@ mod test {
         let ts = TestStruct::new(rfid).await;
         let mut client = start_client().await;
 
-        let mut res = client.read_single_block(
+        let res = client.read_single_block(
             Request::new(SingleBlockRequest{
                 block_index: block_idx
             })).await;
@@ -309,7 +315,7 @@ mod test {
         let mut seq = Sequence::new();
         let n = 1000;
 
-        for i in 0 .. n {
+        for _ in 0 .. n {
             let rstr: String = 
                     thread_rng().sample_iter(&Alphanumeric).take(16)
                     .map(char::from).collect();
@@ -324,7 +330,7 @@ mod test {
         let mut client = start_client().await;
 
         let mut requests: Vec<StreamPayload> = Vec::new();
-        for i in 0 .. n {
+        for _ in 0 .. n {
             let sp = StreamPayload {
                 action: ClientActions::Ack as i32,
                 request: 0
@@ -345,6 +351,137 @@ mod test {
                     continue; 
                 }
                 Err(_) => { break; }
+            }
+        }
+
+        let infos: Vec<String> = payloads.into_iter().map(|p| p.info).collect();
+        assert_eq!(infos, v);
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn read_uuid_unknown_action_at_start() {
+        
+        let reader = MockReaderTraits::new();
+
+        let rfid = RFID::new(Box::new(reader));
+        
+        let ts = TestStruct::new(rfid).await;
+        let mut client = start_client().await;
+
+        let sp = StreamPayload {
+            action: ClientActions::Unknown as i32,
+            request: 0
+        };
+        let stream = stream::iter(vec![sp]);
+        
+        let mut res = client.read_uuid_continous(Request::new(stream))
+            .await.unwrap().into_inner();
+
+        ts.end().await;
+
+        loop {
+            match res.message().await {
+                Ok(_) => { continue; }
+                Err(e) => {
+                    assert_eq!(e.code(), tonic::Code::InvalidArgument);
+                    assert!(e.message().contains("Unknown user action"));
+                    break;
+                }
+            }
+        } 
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn read_uuid_cancelled_at_start() {
+        
+        let reader = MockReaderTraits::new();
+        let rfid = RFID::new(Box::new(reader));
+        
+        let ts = TestStruct::new(rfid).await;
+        let mut client = start_client().await;
+
+        let sp = StreamPayload {
+            action: ClientActions::Cancel as i32,
+            request: 0
+        };
+        let stream = stream::iter(vec![sp]);
+        
+        let mut res = client.read_uuid_continous(Request::new(stream))
+            .await.unwrap().into_inner();
+
+        ts.end().await;
+
+        loop {
+            match res.message().await {
+                Ok(_) => { continue; }
+                Err(e) => {
+                    assert_eq!(e.code(), tonic::Code::Cancelled);
+                    assert!(e.message().contains("Cancelled by user"));
+                    break;
+                }
+            }
+        } 
+    }
+
+    /* tests 1000 calls with correct acks with cancellation request at the end*/
+    #[tokio::test]
+    #[serial]
+    async fn read_uuid_n_packets_cancel_end() {
+        
+        let mut reader = MockReaderTraits::new();
+        let mut v: Vec<String> = Vec::new();
+        let mut seq = Sequence::new();
+        let n = 1000;
+
+        for _ in 0 .. n {
+            let rstr: String = 
+                    thread_rng().sample_iter(&Alphanumeric).take(16)
+                    .map(char::from).collect();
+            v.push(rstr.clone());
+            reader.expect_read_uuid().times(1).in_sequence(&mut seq).
+                returning(move || { Ok(rstr.clone()) });
+        }
+
+        let rfid = RFID::new(Box::new(reader));
+        
+        let ts = TestStruct::new(rfid).await;
+        let mut client = start_client().await;
+
+        let mut requests: Vec<StreamPayload> = Vec::new();
+        for _ in 0 .. n {
+            let sp = StreamPayload {
+                action: ClientActions::Ack as i32,
+                request: 0
+            };
+            requests.push(sp)
+        }
+
+        /* last cancellation package */
+        requests.push(StreamPayload {
+            action: ClientActions::Cancel as i32,
+            request: 0
+        });
+
+        let stream = stream::iter(requests);
+        
+        let mut res = client.read_uuid_continous(Request::new(stream)).await.
+            unwrap().into_inner();
+        let mut payloads: Vec<Payload> = Vec::new();
+        ts.end().await;
+
+        loop {
+            match res.message().await {
+                Ok(val) => { 
+                    if let Some(payload) = val { payloads.push(payload); }
+                    continue; 
+                }
+                Err(e) => { 
+                    assert_eq!(e.code(), tonic::Code::Cancelled);
+                    assert!(e.message().contains("Cancelled by user"));
+                    break;
+                }
             }
         }
 
