@@ -54,7 +54,7 @@ impl ReaderTraits for Reader {
             SINGLE_BLK_REQ, raw_uuid, block_hex, SINGLE_BLK_REQ_END
         );
 
-        let raw_data = self.send_read_regex(&cmd, &vec![SINGLE_BLK_REGEX])?;
+        let raw_data = self.send_read_regex(&cmd, &[SINGLE_BLK_REGEX])?;
 
         let start = raw_data.find(SINGLE_BLK_START).unwrap() + SINGLE_BLK_OFFSET;
         let end = start + SINGLE_BLK_CHARS;
@@ -115,7 +115,7 @@ impl Reader {
     }
 
     fn read_raw_uuid(&mut self) -> Result<String, ReaderError> {
-        let res = self.send_read_regex(INV_REQ, &vec![UUID_REGEX])?;
+        let res = self.send_read_regex(INV_REQ, &[UUID_REGEX])?;
         let raw_uuid = get_uuid(&res);
         Ok(raw_uuid)
     }
