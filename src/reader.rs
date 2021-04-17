@@ -1,38 +1,19 @@
 
 use std::fmt;
 use std::fmt::Debug;
+use regex::Regex;
 
 use crate::serial::err::SerialError;
 use crate::serial::RFIDSerialTraits;
+use crate::utils::StopWatch;
 
-#[derive(Debug)]
-pub enum ReaderError<> {
-    SerialError(SerialError),
-    //returns the whatever is read when no matching targets
-    NoMatchingTargets(String)
-}
+mod err;
 
-impl fmt::Display for ReaderError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            ReaderError::SerialError(ref e) =>
-                std::fmt::Display::fmt(&e, f),
-            ReaderError::NoMatchingTargets(ref e) =>
-                std::fmt::Display::fmt(&e, f),
-        }
-    }
-}
-
-impl From<SerialError> for ReaderError {
-    fn from(err: SerialError) -> ReaderError {
-        ReaderError::SerialError(err)
-    }
-}
+use err::ReaderError;
 
 /* for mocking of reader functions */
 #[cfg_attr(test, automock)]
 pub trait ReaderTraits: Send + Sync {
-    fn initialize(&self) -> Result<(), ReaderError>;
     fn read_uuid(&self) -> Result<String, ReaderError>; 
     //returns a single block of data of information
     fn read_single_block(&self, block_idx: u32) 
@@ -48,12 +29,6 @@ pub struct Reader {
 }
 
 impl ReaderTraits for Reader {
-
-    fn initialize(&self) -> Result<(), ReaderError> {
-        //Ok(())
-        //Err(ReaderError::SerialError(SerialError::NoSerialPortsFound))
-        Err(ReaderError::NoMatchingTargets("123".to_string()))
-    }
 
     fn read_uuid(&self) -> Result<String, ReaderError> {
         Err(ReaderError::SerialError(SerialError::NoSerialPortsFound))
@@ -74,17 +49,44 @@ impl Reader {
 
     pub fn new(serial: Box<dyn RFIDSerialTraits>, read_timeout_ms: u64) 
         -> Reader {
-        Reader {
+        
+        let mut reader = Reader {
             serial: serial,
             read_timeout_ms: read_timeout_ms
+        };
+
+        if let Err(e) = reader.initialize() {
+            log::error!("{}", e);
+            panic!(e.to_string());
         }
+
+        reader
     }
 
-    fn send_read_regex(&self, send: &str, regex: &Vec<&str>) {
+    //send a command, and check whether output matches any of the regex
+    fn send_read_regex(&mut self, cmd: &str, regex: &Vec<&str>) 
+        -> Result<(), ReaderError> {
+        
+        let read = self.serial.send_recv(cmd)?;
+        
+        for r in regex.iter() {
+            //panic if any regex is invalid
+            let re = match Regex::new(r) {
+                Ok(re) => { re },
+                Err(e) => {
+                    log::error!("{}", ReaderError::InvalidRegex(r.to_string()));
+                    panic!(ReaderError::InvalidRegex(r.to_string()).to_string());
+                }
+            };
+            if let Some(_) = re.captures(&read) {
+                return Ok(())
+            }
+        }
 
+        return Err(ReaderError::NoMatchingTargets(read))
     }
 
-    fn initialize(&self) -> Result<(), ReaderError> {
+    fn initialize(&mut self) -> Result<(), ReaderError> {
         self.set_iso()?;
         self.set_half_data()?;
         self.set_agc()?;
@@ -93,23 +95,23 @@ impl Reader {
         Ok(())
     }
 
-    fn set_iso(&self) -> Result<(), ReaderError> {
+    fn set_iso(&mut self) -> Result<(), ReaderError> {
         Ok(())
     }
 
-    fn set_half_data(&self) -> Result<(), ReaderError> {
+    fn set_half_data(&mut self) -> Result<(), ReaderError> {
         Ok(())
     }
 
-    fn set_agc(&self) -> Result<(), ReaderError> {
+    fn set_agc(&mut self) -> Result<(), ReaderError> {
         Ok(())
     }
 
-    fn set_am(&self) -> Result<(), ReaderError> {
+    fn set_am(&mut self) -> Result<(), ReaderError> {
         Ok(())
     }
 
-    fn set_antenna(&self) -> Result<(), ReaderError> {
+    fn set_antenna(&mut self) -> Result<(), ReaderError> {
         Ok(())
     }
 }
