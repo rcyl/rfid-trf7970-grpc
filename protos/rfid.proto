@@ -3,15 +3,16 @@ syntax = "proto3";
 package rfid;
 
 service ReadInfo {
-    rpc ReadUUID(Empty) returns (UUIDPayload) {}
-    rpc ReadSingleBlock(SingleBlockRequest) returns (DataPayload) {} 
-    rpc ReadUUIDContinous(stream StreamPayload) returns (stream UUIDPayload) {}
-    rpc ReadBlockContinous(stream StreamPayload) returns (stream DataPayload) {}
+    rpc ReadUUID(Empty) returns (Payload) {}
+    rpc ReadSingleBlock(SingleBlockRequest) returns (Payload) {} 
+    rpc ReadUUIDContinous(stream StreamPayload) returns (stream Payload) {}
+    rpc ReadBlockContinous(stream StreamPayload) returns (stream Payload) {}
 }
 
 enum ClientActions {
     UNKNOWN = 0;
-    CANCEL = 1;
+    ACK = 1;
+    CANCEL = 2;
 }
 
 message StreamPayload {
@@ -19,13 +20,8 @@ message StreamPayload {
     SingleBlockRequest request = 2;
 }
 
-message DataPayload {
-    string uuid = 1;
-    string data = 2;
-}
-
-message UUIDPayload {
-    string uuid = 1;
+message Payload {
+    string info = 1;
 }
 
 message SingleBlockRequest {
