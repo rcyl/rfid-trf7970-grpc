@@ -50,13 +50,13 @@ impl RFIDSerial {
             Ok(ports) => ports,
             Err(e) => {
                 //error!("{}", SerialError::SerialError(e));
-                panic!(SerialError::SerialError(e).to_string());
+                panic!("{}", SerialError::SerialError(e).to_string());
             }
         };
 
         if ports.is_empty() {
             log::error!("{}", SerialError::NoSerialPortsFound);
-            panic!(SerialError::NoSerialPortsFound.to_string());
+            panic!("{}", SerialError::NoSerialPortsFound.to_string());
         }
 
         let usb_ports: Vec<&SerialPortInfo> = ports
@@ -66,12 +66,12 @@ impl RFIDSerial {
 
         if usb_ports.is_empty() {
             log::error!("{}", SerialError::USBSerialNotFound);
-            panic!(SerialError::USBSerialNotFound.to_string());
+            panic!("{}", SerialError::USBSerialNotFound.to_string());
         }
 
         if usb_ports.len() > 1 {
             log::error!("{}", SerialError::MultipleSerialPorts);
-            panic!(SerialError::MultipleSerialPorts.to_string());
+            panic!("{}", SerialError::MultipleSerialPorts.to_string());
         }
 
         let s = SerialPortSettings {
@@ -88,7 +88,7 @@ impl RFIDSerial {
             Ok(port) => port,
             Err(e) => {
                 //log::error!("{}", SerialError::SerialError(e));
-                panic!(SerialError::SerialError(e).to_string());
+                panic!("{}", SerialError::SerialError(e).to_string());
             }
         };
 
@@ -102,7 +102,7 @@ impl RFIDSerial {
         /* let the program panic if lock fails */
         let lib = self.lib.lock().unwrap();
         let mut port = self.port.lock().unwrap();
-        return lib.send(&msg, &mut port);
+        lib.send(&msg, &mut port)
     }
 }
 

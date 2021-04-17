@@ -105,11 +105,11 @@ fn reverse_uuid(uuid: &str) -> String {
 
 impl Reader {
     pub fn new(serial: Box<dyn RFIDSerialTraits>) -> Reader {
-        let mut reader = Reader { serial: serial };
+        let mut reader = Reader { serial };
 
         if let Err(e) = reader.initialize() {
             log::error!("{}", e);
-            panic!(e.to_string());
+            panic!("{}", e.to_string());
         }
         reader
     }
@@ -130,14 +130,14 @@ impl Reader {
                 Ok(re) => re,
                 Err(_) => {
                     log::error!("{}", ReaderError::InvalidRegex(r.to_string()));
-                    panic!(ReaderError::InvalidRegex(r.to_string()).to_string());
+                    panic!("{}", ReaderError::InvalidRegex(r.to_string()).to_string());
                 }
             };
             if let Some(cap) = re.captures(&read) {
                 return Ok(String::from(cap.get(0).unwrap().as_str()));
             }
         }
-        return Err(ReaderError::NoMatchingTargets(read));
+        Err(ReaderError::NoMatchingTargets(read))
     }
 
     fn initialize(&mut self) -> Result<(), ReaderError> {

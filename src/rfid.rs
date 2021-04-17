@@ -202,7 +202,7 @@ mod test {
         ts.end().await;
 
         match res {
-            Ok(_) => panic!("Should have been an error"),
+            Ok(_) => panic!("{}", "Should have been an error"),
             Err(e) => assert!(e.message().contains("multiple tries")),
         }
     }
@@ -256,7 +256,7 @@ mod test {
         ts.end().await;
 
         match res {
-            Ok(_) => panic!("Should have been an error"),
+            Ok(_) => panic!("{}", "Should have been an error"),
             Err(e) => assert!(e.message().contains("multiple tries")),
         }
     }
