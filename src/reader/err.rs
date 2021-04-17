@@ -8,7 +8,7 @@ pub enum ReaderError<> {
     SerialError(SerialError),
     //returns the whatever is read when no matching targets
     NoMatchingTargets(String),
-    InvalidRegex(String)
+    InvalidRegex(String),
 }
 
 impl fmt::Display for ReaderError {
