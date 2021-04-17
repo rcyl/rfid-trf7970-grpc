@@ -6,16 +6,15 @@ use regex::Regex;
 
 use crate::serial::err::SerialError;
 use crate::serial::RFIDSerialTraits;
-use crate::utils::StopWatch;
 
-mod err;
+pub mod err;
 pub mod constants;
 
 use err::ReaderError;
 use constants::{AGC, AGC_RES, AGC_RES_2, AM, AM_RES, AM_RES_2, 
     EXT_ANT, EXT_ANT_RES, ISO, ISO_RES, RF_HALF_DATA, RF_HALF_DATA_RES,
     INV_REQ, UUID_REGEX, UUID_CHARS, UUID_START, BLOCK_CHARS,
-    SINGLE_BLK_REQ, SINGLE_BLK_REGEX, SINGLE_BLK_REQ_END, SINGLE_BLK_REQ_ANS,
+    SINGLE_BLK_REQ, SINGLE_BLK_REGEX, SINGLE_BLK_REQ_END,
     SINGLE_BLK_START, SINGLE_BLK_OFFSET, SINGLE_BLK_CHARS,
 };
 
@@ -52,7 +51,7 @@ impl ReaderTraits for Reader {
             return Err(ReaderError::BlockIdxTooLarge(block_idx));
         }
 
-        let mut cmd = format!("{}{}{}{}", 
+        let cmd = format!("{}{}{}{}", 
             SINGLE_BLK_REQ, raw_uuid, block_hex, SINGLE_BLK_REQ_END);
         
         let raw_data = self.send_read_regex(&cmd, &vec![SINGLE_BLK_REGEX])?;
@@ -65,7 +64,7 @@ impl ReaderTraits for Reader {
     }
 
     //TODO
-    fn read_multiple_block(&mut self, block_idx: u32, num_blocks: u32) 
+    fn read_multiple_block(&mut self, _block_idx: u32, _num_blocks: u32) 
         -> Result<String, ReaderError> {
         Err(ReaderError::SerialError(SerialError::NoSerialPortsFound))
     }
@@ -76,9 +75,9 @@ fn get_uuid(raw_str: &str) -> String {
     // let it panic, if uuid regex matched but not the UUID start
     let start_idx = raw_str.find(UUID_START).unwrap();
 
-    let mut s: Vec<char> = raw_str.chars().collect();
+    let s: Vec<char> = raw_str.chars().collect();
+    let start = start_idx - (UUID_CHARS - 2);
     let mut uuid = String::new();
-    let mut start = start_idx - (UUID_CHARS - 2);
 
     for i in 0 .. (UUID_CHARS / 2) {
         let char_idx = start + i * 2;
@@ -92,7 +91,7 @@ fn reverse_uuid(uuid: &str) -> String {
     
     assert!(uuid.len() == UUID_CHARS);
     
-    let mut s: Vec<char> = uuid.chars().collect();
+    let s: Vec<char> = uuid.chars().collect();
     let mut reversed = String::new();
 
     for i in 1 .. (uuid.len() / 2) + 1 {    
@@ -136,7 +135,7 @@ impl Reader {
             //panic if any regex is invalid
             let re = match Regex::new(r) {
                 Ok(re) => { re },
-                Err(e) => {
+                Err(_) => {
                     log::error!("{}", ReaderError::InvalidRegex(r.to_string()));
                     panic!(ReaderError::InvalidRegex(r.to_string()).to_string());
                 }
@@ -185,7 +184,7 @@ impl Reader {
 
 #[cfg(test)]
 mod test {
-    use mockall::{mock, predicate::eq, Sequence};
+    use mockall::{predicate::eq};
     use crate::serial::MockRFIDSerialTraits;
     use super::*;
 
@@ -432,6 +431,7 @@ mod test {
             }
         }
 
+        #[test]
         fn serial_error() {
             let mut serial = MockRFIDSerialTraits::new();
             init_helper(&mut serial);
@@ -508,7 +508,6 @@ mod test {
         #[test]
         fn serial_error_on_data_call() {
             
-            let uuid = "[CAFEDEADBEEFB0E0,FF]";
             let expected_cmd = "0113000304182220CAFEDEADBEEFB0E0FF0000";
 
             let mut serial = MockRFIDSerialTraits::new();
@@ -535,7 +534,6 @@ mod test {
         #[test]
         fn non_matching_uuid_on_data_call() {
             
-            let uuid = "[CAFEDEADBEEFB0E0,FF]";
             let expected_cmd = "0113000304182220CAFEDEADBEEFB0E0FF0000";
 
             let mut serial = MockRFIDSerialTraits::new();
@@ -563,7 +561,6 @@ mod test {
         #[test]
         fn non_matching_data_on_data_calll() {
             
-            let uuid = "[CAFEDEADBEEFB0E0,FF]";
             let expected_cmd = "0113000304182220CAFEDEADBEEFB0E0FF0000";
 
             let mut serial = MockRFIDSerialTraits::new();
@@ -591,7 +588,6 @@ mod test {
         #[test]
         fn ok() {
             
-            let uuid = "[CAFEDEADBEEFB0E0,FF]";
             let expected_cmd = "0113000304182220CAFEDEADBEEFB0E0FF0000";
 
             let mut serial = MockRFIDSerialTraits::new();

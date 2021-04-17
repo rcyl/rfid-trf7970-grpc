@@ -19,7 +19,7 @@ pub trait SerialCrateTraits: Send + Sync {
 
 pub struct SerialCrate {}
 
-impl dyn SerialCrateTraits {
+impl SerialCrate {
     pub fn new() -> SerialCrate {
         SerialCrate {}
     }
