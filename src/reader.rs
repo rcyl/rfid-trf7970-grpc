@@ -109,7 +109,7 @@ impl Reader {
 
         if let Err(e) = reader.initialize() {
             log::error!("{}", e);
-            panic!(e.to_string());
+            panic!("{}", e.to_string());
         }
         reader
     }
@@ -130,7 +130,7 @@ impl Reader {
                 Ok(re) => re,
                 Err(_) => {
                     log::error!("{}", ReaderError::InvalidRegex(r.to_string()));
-                    panic!(ReaderError::InvalidRegex(r.to_string()).to_string());
+                    panic!("{}", ReaderError::InvalidRegex(r.to_string()).to_string());
                 }
             };
             if let Some(cap) = re.captures(&read) {
