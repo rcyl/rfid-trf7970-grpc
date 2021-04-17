@@ -32,4 +32,3 @@ pub const SINGLE_BLK_CHARS: usize = 8;
 pub const UUID_START: &'static str = "E0";
 pub const UUID_CHARS: usize = 16;
 pub const BLOCK_CHARS: usize = 2;
-pub const TRIES: u32 = 3;

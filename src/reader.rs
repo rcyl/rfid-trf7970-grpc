@@ -6,7 +6,6 @@ use regex::Regex;
 
 use crate::serial::err::SerialError;
 use crate::serial::RFIDSerialTraits;
-use crate::utils::StopWatch;
 
 mod err;
 pub mod constants;

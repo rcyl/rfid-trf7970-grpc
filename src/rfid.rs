@@ -189,8 +189,8 @@ impl ReadInfo for RFID {
 mod test {
 
     use mockall::{mock, predicate::eq, Sequence};
-    use crate::rfid::MockReaderTraits;
+    use crate::reader::MockReaderTraits;
+    use crate::scaffold::scaffold::*;
     use super::*;
-    
 
 }
