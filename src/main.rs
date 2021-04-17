@@ -3,6 +3,7 @@ mod serial;
 mod reader;
 mod rfid;
 mod include;
+mod scaffold;
 
 use tonic::transport::Server;
 use include::read_info_server::ReadInfoServer;

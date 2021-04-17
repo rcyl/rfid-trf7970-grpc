@@ -190,7 +190,110 @@ mod test {
 
     use mockall::{mock, predicate::eq, Sequence};
     use crate::reader::MockReaderTraits;
+    use crate::reader::err::ReaderError;
+    use crate::serial::err::SerialError;
     use crate::scaffold::scaffold::*;
+    use serial_test::*;
     use super::*;
+
+    #[tokio::test]
+    #[serial]
+    async fn read_uuid_serial_error() {
+        
+        let mut reader = MockReaderTraits::new();
+        reader.expect_read_uuid().returning(|| {
+            Err(ReaderError::SerialError(SerialError::NoReplyAfterMultipleTries))
+        });
+
+        let rfid = RFID::new(Box::new(reader));
+        
+        let ts = TestStruct::new(rfid).await;
+        let mut client = start_client().await;
+
+        let mut res = client.read_uuid(Request::new(Empty{})).await;
+        ts.end().await;
+
+        match res {
+            Ok(_) => { panic!("Should have been an error") }, 
+            Err(e) => { assert!(e.message().contains("multiple tries"))}
+        }       
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn read_uuid_ok() {
+        
+        let mut reader = MockReaderTraits::new();
+        reader.expect_read_uuid().returning(|| {
+            Ok(String::from("CAFEDEADBEEFB0B0"))
+        });
+
+        let rfid = RFID::new(Box::new(reader));
+        
+        let ts = TestStruct::new(rfid).await;
+        let mut client = start_client().await;
+
+        let mut res = client.read_uuid(Request::new(Empty{})).await;
+        ts.end().await;
+
+        assert!(!res.is_err());
+        assert_eq!(res.unwrap().get_ref().info, "CAFEDEADBEEFB0B0");
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn read_single_block_serial_error() {
+        
+        let block_idx: u32 = 255;
+        let mut reader = MockReaderTraits::new();
+        
+        reader.expect_read_single_block().with(eq(block_idx)).returning(|_| {
+            Err(ReaderError::SerialError(SerialError::NoReplyAfterMultipleTries))
+        });
+
+        let rfid = RFID::new(Box::new(reader));
+        
+        let ts = TestStruct::new(rfid).await;
+        let mut client = start_client().await;
+
+        let mut res = client.read_single_block(
+            Request::new(SingleBlockRequest{
+                block_index: block_idx
+            })).await;
+        
+        ts.end().await;
+
+        match res {
+            Ok(_) => { panic!("Should have been an error") }, 
+            Err(e) => { assert!(e.message().contains("multiple tries"))}
+        }       
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn read_single_block_ok() {
+        
+        let block_idx: u32 = 255;
+        let mut reader = MockReaderTraits::new();
+        
+        reader.expect_read_single_block().with(eq(block_idx)).returning(|_| {
+            Ok(String::from("12345678"))
+        });
+
+        let rfid = RFID::new(Box::new(reader));
+        
+        let ts = TestStruct::new(rfid).await;
+        let mut client = start_client().await;
+
+        let mut res = client.read_single_block(
+            Request::new(SingleBlockRequest{
+                block_index: block_idx
+            })).await;
+        
+        ts.end().await;
+
+        assert!(!res.is_err());
+        assert_eq!(res.unwrap().get_ref().info, "12345678");
+    }
 
 }
