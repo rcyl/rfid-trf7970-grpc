@@ -58,7 +58,7 @@ impl ReaderTraits for Reader {
         let raw_data = self.send_read_regex(&cmd, &vec![SINGLE_BLK_REGEX])?;
 
         let start = raw_data.find(SINGLE_BLK_START).unwrap() + SINGLE_BLK_OFFSET;
-        let end = start + BLOCK_CHARS;
+        let end = start + SINGLE_BLK_CHARS;
         let data = &raw_data[start..end];
 
         Ok(String::from(data))
@@ -339,9 +339,57 @@ mod test {
         }
     }
 
-    //TODO
-    mod single_blk_regex {
+    mod single_block_regex {
 
+        use super::*;
+
+        #[test]
+        fn ok() {
+            let re = Regex::new(SINGLE_BLK_REGEX).unwrap();
+            assert!(re.is_match("[0012345678]"))
+        }
+    
+        #[test]
+        fn no_square_brackets() {
+            let re = Regex::new(SINGLE_BLK_REGEX).unwrap();
+            assert!(!re.is_match("0012345678"))
+        }
+    
+        #[test]
+        fn non_hex() {
+            let re = Regex::new(SINGLE_BLK_REGEX).unwrap();
+            assert!(!re.is_match("[XXXXXXXXXX]"))
+        }
+    
+        #[test]
+        fn insufficient_len() {
+            let re = Regex::new(SINGLE_BLK_REGEX).unwrap();
+            assert!(!re.is_match("[FFFF]"))
+        }
+    
+        #[test]
+        fn empty() {
+            let re = Regex::new(SINGLE_BLK_REGEX).unwrap();
+            assert!(!re.is_match(""))
+        }
+    
+        #[test]
+        fn chars_infront() {
+            let re = Regex::new(SINGLE_BLK_REGEX).unwrap();
+            assert!(re.is_match("XXXXXX[0012345678]"))
+        }
+
+        #[test]
+        fn chars_atback() {
+            let re = Regex::new(SINGLE_BLK_REGEX).unwrap();
+            assert!(re.is_match("[0012345678]XXXXX"))
+        }
+
+        #[test]
+        fn chars_frontandback() {
+            let re = Regex::new(SINGLE_BLK_REGEX).unwrap();
+            assert!(re.is_match("XXXXXX[0012345678]XXXXX"))
+        }
     }
 
     //test fixture to setup device for other tests besides init
@@ -364,88 +412,203 @@ mod test {
         });
     }
 
-    #[test]
-    fn non_matching_uuid() {
-        let mut serial = MockRFIDSerialTraits::new();
-        init_helper(&mut serial);
-        serial.expect_send_recv().with(eq(INV_REQ)).returning(|_| {
-            Ok(String::from("[CAFE,FF]"))
-        });
-        let mut reader = Reader::new(Box::new(serial));
-        let res = reader.read_uuid();
-        assert!(res.is_err());
+    mod uuid {
+        use super::*;
+        #[test]
+        fn non_matching() {
+            let mut serial = MockRFIDSerialTraits::new();
+            init_helper(&mut serial);
+            serial.expect_send_recv().with(eq(INV_REQ)).returning(|_| {
+                Ok(String::from("[CAFE,FF]"))
+            });
+            let mut reader = Reader::new(Box::new(serial));
+            let res = reader.read_uuid();
+            assert!(res.is_err());
 
-        if let Err(e) = res {
-            assert_eq!(e.to_string(), 
-                ReaderError::NoMatchingTargets(String::from("[CAFE,FF]")).to_string());
+            if let Err(e) = res {
+                assert_eq!(e.to_string(), 
+                    ReaderError::NoMatchingTargets(
+                        String::from("[CAFE,FF]")).to_string());
+            }
         }
-    }
 
-    fn serial_error_uuid() {
-        let mut serial = MockRFIDSerialTraits::new();
-        init_helper(&mut serial);
-        serial.expect_send_recv().with(eq(INV_REQ)).returning(|_| {
-            Err(SerialError::NoReplyAfterMultipleTries)
-        });
-        let mut reader = Reader::new(Box::new(serial));
-        let res = reader.read_uuid();
-        assert!(res.is_err());
+        fn serial_error() {
+            let mut serial = MockRFIDSerialTraits::new();
+            init_helper(&mut serial);
+            serial.expect_send_recv().with(eq(INV_REQ)).returning(|_| {
+                Err(SerialError::NoReplyAfterMultipleTries)
+            });
+            let mut reader = Reader::new(Box::new(serial));
+            let res = reader.read_uuid();
+            assert!(res.is_err());
 
-        if let Err(e) = res {
-            assert_eq!(e.to_string(), 
-                ReaderError::SerialError(SerialError::NoReplyAfterMultipleTries).to_string());
+            if let Err(e) = res {
+                assert_eq!(e.to_string(), 
+                    ReaderError::SerialError(SerialError::NoReplyAfterMultipleTries).to_string());
+            }
+        }
+        
+        #[test]
+        fn matching() {
+            let mut serial = MockRFIDSerialTraits::new();
+            init_helper(&mut serial);
+            serial.expect_send_recv().with(eq(INV_REQ)).returning(|_| {
+                Ok(String::from("[CAFEBABEDEADBEE0,FF]"))
+            });
+            let mut reader = Reader::new(Box::new(serial));
+            let res = reader.read_uuid();
+            assert!(!res.is_err());
+            assert_eq!(res.unwrap().to_string(), "E0BEADDEBEBAFECA");
+        }
+
+        #[test]
+        fn chars_in_front_matching() {
+            let mut serial = MockRFIDSerialTraits::new();
+            init_helper(&mut serial);
+            serial.expect_send_recv().with(eq(INV_REQ)).returning(|_| {
+                Ok(String::from("XXXXXXXX[CAFEBABEDEADBEE0,FF]"))
+            });
+            let mut reader = Reader::new(Box::new(serial));
+            let res = reader.read_uuid();
+            assert!(!res.is_err());
+            assert_eq!(res.unwrap().to_string(), "E0BEADDEBEBAFECA");
+        }
+
+        #[test]
+        fn chars_at_the_back_matching() {
+            let mut serial = MockRFIDSerialTraits::new();
+            init_helper(&mut serial);
+            serial.expect_send_recv().with(eq(INV_REQ)).returning(|_| {
+                Ok(String::from("[CAFEBABEDEADBEE0,FF]XXXXXX"))
+            });
+            let mut reader = Reader::new(Box::new(serial));
+            let res = reader.read_uuid();
+            assert!(!res.is_err());
+            assert_eq!(res.unwrap().to_string(), "E0BEADDEBEBAFECA");
+        }
+
+        #[test]
+        fn chars_at_the_front_and_back_matching() {
+            let mut serial = MockRFIDSerialTraits::new();
+            init_helper(&mut serial);
+            serial.expect_send_recv().with(eq(INV_REQ)).returning(|_| {
+                Ok(String::from("XXXXXXXX[CAFEBABEDEADBEE0,FF]XXXXXX"))
+            });
+            let mut reader = Reader::new(Box::new(serial));
+            let res = reader.read_uuid();
+            assert!(!res.is_err());
+            assert_eq!(res.unwrap().to_string(), "E0BEADDEBEBAFECA");
         }
     }
     
-    #[test]
-    fn matching_uuid() {
-        let mut serial = MockRFIDSerialTraits::new();
-        init_helper(&mut serial);
-        serial.expect_send_recv().with(eq(INV_REQ)).returning(|_| {
-            Ok(String::from("[CAFEBABEDEADBEE0,FF]"))
-        });
-        let mut reader = Reader::new(Box::new(serial));
-        let res = reader.read_uuid();
-        assert!(!res.is_err());
-        assert_eq!(res.unwrap().to_string(), "E0BEADDEBEBAFECA");
-    }
+    mod single_block {
 
-    #[test]
-    fn chars_in_front_matching_uuid() {
-        let mut serial = MockRFIDSerialTraits::new();
-        init_helper(&mut serial);
-        serial.expect_send_recv().with(eq(INV_REQ)).returning(|_| {
-            Ok(String::from("XXXXXXXX[CAFEBABEDEADBEE0,FF]"))
-        });
-        let mut reader = Reader::new(Box::new(serial));
-        let res = reader.read_uuid();
-        assert!(!res.is_err());
-        assert_eq!(res.unwrap().to_string(), "E0BEADDEBEBAFECA");
-    }
+        use super::*;
 
-    #[test]
-    fn chars_at_the_back_matching_uuid() {
-        let mut serial = MockRFIDSerialTraits::new();
-        init_helper(&mut serial);
-        serial.expect_send_recv().with(eq(INV_REQ)).returning(|_| {
-            Ok(String::from("[CAFEBABEDEADBEE0,FF]XXXXXX"))
-        });
-        let mut reader = Reader::new(Box::new(serial));
-        let res = reader.read_uuid();
-        assert!(!res.is_err());
-        assert_eq!(res.unwrap().to_string(), "E0BEADDEBEBAFECA");
-    }
+        #[test]
+        fn serial_error_on_data_call() {
+            
+            let uuid = "[CAFEDEADBEEFB0E0,FF]";
+            let expected_cmd = "0113000304182220CAFEDEADBEEFB0E0FF0000";
 
-    #[test]
-    fn chars_at_the_front_and_back_matching_uuid() {
-        let mut serial = MockRFIDSerialTraits::new();
-        init_helper(&mut serial);
-        serial.expect_send_recv().with(eq(INV_REQ)).returning(|_| {
-            Ok(String::from("XXXXXXXX[CAFEBABEDEADBEE0,FF]XXXXXX"))
-        });
-        let mut reader = Reader::new(Box::new(serial));
-        let res = reader.read_uuid();
-        assert!(!res.is_err());
-        assert_eq!(res.unwrap().to_string(), "E0BEADDEBEBAFECA");
+            let mut serial = MockRFIDSerialTraits::new();
+            init_helper(&mut serial);
+           
+            serial.expect_send_recv().with(eq(INV_REQ)).returning(|_| {
+                Ok(String::from("[CAFEDEADBEEFB0E0,FF]"))
+            });
+            serial.expect_send_recv().with(eq(expected_cmd)).returning(|_| {
+                Err(SerialError::NoReplyAfterMultipleTries)
+            });
+
+            let mut reader = Reader::new(Box::new(serial));
+            let block_idx = 255;
+            let res = reader.read_single_block(block_idx);
+
+            assert!(res.is_err());
+            if let Err(e) = res {
+                assert_eq!(e.to_string(), 
+                    ReaderError::SerialError(SerialError::NoReplyAfterMultipleTries).to_string());
+            }
+        }
+
+        #[test]
+        fn non_matching_uuid_on_data_call() {
+            
+            let uuid = "[CAFEDEADBEEFB0E0,FF]";
+            let expected_cmd = "0113000304182220CAFEDEADBEEFB0E0FF0000";
+
+            let mut serial = MockRFIDSerialTraits::new();
+            init_helper(&mut serial);
+           
+            serial.expect_send_recv().with(eq(INV_REQ)).returning(|_| {
+                Ok(String::from("[00E0,FF]"))
+            });
+            serial.expect_send_recv().with(eq(expected_cmd)).returning(|_| {
+                Err(SerialError::NoReplyAfterMultipleTries)
+            });
+
+            let mut reader = Reader::new(Box::new(serial));
+            let block_idx = 255;
+            let res = reader.read_single_block(block_idx);
+
+            assert!(res.is_err());
+            if let Err(e) = res {
+                assert_eq!(e.to_string(), 
+                    ReaderError::NoMatchingTargets(
+                        String::from("[00E0,FF]")).to_string());
+            }
+        }
+
+        #[test]
+        fn non_matching_data_on_data_calll() {
+            
+            let uuid = "[CAFEDEADBEEFB0E0,FF]";
+            let expected_cmd = "0113000304182220CAFEDEADBEEFB0E0FF0000";
+
+            let mut serial = MockRFIDSerialTraits::new();
+            init_helper(&mut serial);
+           
+            serial.expect_send_recv().with(eq(INV_REQ)).returning(|_| {
+                Ok(String::from("[CAFEDEADBEEFB0E0,FF]"))
+            });
+            serial.expect_send_recv().with(eq(expected_cmd)).returning(|_| {
+                Ok(String::from("[00]"))
+            });
+
+            let mut reader = Reader::new(Box::new(serial));
+            let block_idx = 255;
+            let res = reader.read_single_block(block_idx);
+
+            assert!(res.is_err());
+            if let Err(e) = res {
+                assert_eq!(e.to_string(), 
+                    ReaderError::NoMatchingTargets(
+                        String::from("[00]")).to_string());
+            }
+        }
+        
+        #[test]
+        fn ok() {
+            
+            let uuid = "[CAFEDEADBEEFB0E0,FF]";
+            let expected_cmd = "0113000304182220CAFEDEADBEEFB0E0FF0000";
+
+            let mut serial = MockRFIDSerialTraits::new();
+            init_helper(&mut serial);
+           
+            serial.expect_send_recv().with(eq(INV_REQ)).returning(|_| {
+                Ok(String::from("[CAFEDEADBEEFB0E0,FF]"))
+            });
+            serial.expect_send_recv().with(eq(expected_cmd)).returning(|_| {
+                Ok(String::from("[0012345678]"))
+            });
+
+            let mut reader = Reader::new(Box::new(serial));
+            let block_idx = 255;
+            let res = reader.read_single_block(block_idx);
+            assert!(!res.is_err());
+            assert_eq!(res.unwrap(), "12345678"); 
+        }
     }
 }

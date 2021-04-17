@@ -21,12 +21,12 @@ pub const RF_HALF_DATA_RES: &'static str = "Register write request.";
 pub const INV_REQ: &'static str = "010B000304142601000000";
 pub const UUID_REGEX: &'static str = r"\[[a-fA-F0-9]{16},[a-fA-F0-9]{2}\]";
 
-pub const SINGLE_BLK_REGEX: &'static str = r"\\[00[a-fA-F0-9]{8}\\]";
+pub const SINGLE_BLK_REGEX: &'static str = r"\[00[a-fA-F0-9]{8}\]";
 pub const SINGLE_BLK_REQ: &'static str = "0113000304182220";
 pub const SINGLE_BLK_REQ_END: &'static str = "0000";
 pub const SINGLE_BLK_REQ_ANS: &'static str = "Request mode.";
 pub const SINGLE_BLK_START: &'static str = "[";
-pub const SINGLE_BLK_OFFSET: usize = 2; 
+pub const SINGLE_BLK_OFFSET: usize = 3; 
 pub const SINGLE_BLK_CHARS: usize = 8; 
 
 pub const UUID_START: &'static str = "E0";
