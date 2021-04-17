@@ -17,7 +17,7 @@ enum ClientActions {
 
 message StreamPayload {
     ClientActions action = 1;
-    SingleBlockRequest request = 2;
+    uint32 request = 2;
 }
 
 message Payload {

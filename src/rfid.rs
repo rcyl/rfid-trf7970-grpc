@@ -189,11 +189,14 @@ impl ReadInfo for RFID {
 mod test {
 
     use mockall::{mock, predicate::eq, Sequence};
+    use rand::{thread_rng, Rng};
+    use rand::distributions::Alphanumeric;
     use crate::reader::MockReaderTraits;
     use crate::reader::err::ReaderError;
     use crate::serial::err::SerialError;
     use crate::scaffold::scaffold::*;
     use serial_test::*;
+    use futures::stream;
     use super::*;
 
     #[tokio::test]
@@ -294,6 +297,59 @@ mod test {
 
         assert!(!res.is_err());
         assert_eq!(res.unwrap().get_ref().info, "12345678");
+    }
+
+    /* tests 1000 calls with correct acks*/
+    #[tokio::test]
+    #[serial]
+    async fn read_uuid_continuous_ok() {
+        
+        let mut reader = MockReaderTraits::new();
+        let mut v: Vec<String> = Vec::new();
+        let mut seq = Sequence::new();
+        let n = 1000;
+
+        for i in 0 .. n {
+            let rstr: String = 
+                    thread_rng().sample_iter(&Alphanumeric).take(16)
+                    .map(char::from).collect();
+            v.push(rstr.clone());
+            reader.expect_read_uuid().times(1).in_sequence(&mut seq).
+                returning(move || { Ok(rstr.clone()) });
+        }
+
+        let rfid = RFID::new(Box::new(reader));
+        
+        let ts = TestStruct::new(rfid).await;
+        let mut client = start_client().await;
+
+        let mut requests: Vec<StreamPayload> = Vec::new();
+        for i in 0 .. n {
+            let sp = StreamPayload {
+                action: ClientActions::Ack as i32,
+                request: 0
+            };
+            requests.push(sp)
+        }
+        let stream = stream::iter(requests);
+        
+        let mut res = client.read_uuid_continous(Request::new(stream)).await.
+            unwrap().into_inner();
+        let mut payloads: Vec<Payload> = Vec::new();
+        ts.end().await;
+
+        loop {
+            match res.message().await {
+                Ok(val) => { 
+                    if let Some(payload) = val { payloads.push(payload); }
+                    continue; 
+                }
+                Err(_) => { break; }
+            }
+        }
+
+        let infos: Vec<String> = payloads.into_iter().map(|p| p.info).collect();
+        assert_eq!(infos, v);
     }
 
 }
