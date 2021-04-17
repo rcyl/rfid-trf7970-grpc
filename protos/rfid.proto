@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package rfid;
+
+service Read {
+    rpc ReadUUID(Empty) returns (Empty) {}
+    rpc ReadSingleBlock(SingleBlockRequest) returns (DataPayload) {} 
+    rpc ReadUUIDContinous(stream StreamPayload) returns (stream UUIDPayload) {}
+    rpc ReadBlockContinous(stream StreamPayload) returns (stream DataPayload) {}
+}
+
+enum ClientActions {
+    UNKNOWN = 0;
+    CANCEL = 1;
+}
+
+message StreamPayload {
+    ClientActions action = 1;
+    SingleBlockRequest request = 2;
+}
+
+message DataPayload {
+    string uuid = 1;
+    string data = 2;
+}
+
+message UUIDPayload {
+    string uuid = 1;
+}
+
+message SingleBlockRequest {
+    uint32 blockIndex = 1
+}
