@@ -14,6 +14,6 @@ Simply run cargo test. The testing is done via Mockall
 ```cargo test```
 
 ### Running
-This would only work if the RFID is already connected to your computer. You should see the gRPC server listening on port 50051 if all good
+This would only work if the RFID is already connected to your computer. You should see the gRPC server listening on port 50051 if all is good
 
 ``` cargo run ```
