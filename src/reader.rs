@@ -14,7 +14,10 @@ pub mod constants;
 use err::ReaderError;
 use constants::{AGC, AGC_RES, AGC_RES_2, AM, AM_RES, AM_RES_2, 
     EXT_ANT, EXT_ANT_RES, ISO, ISO_RES, RF_HALF_DATA, RF_HALF_DATA_RES,
-    INV_REQ, UUID_REGEX, UUID_CHARS, UUID_START};
+    INV_REQ, UUID_REGEX, UUID_CHARS, UUID_START, BLOCK_CHARS,
+    SINGLE_BLK_REQ, SINGLE_BLK_REGEX, SINGLE_BLK_REQ_END, SINGLE_BLK_REQ_ANS,
+    SINGLE_BLK_START, SINGLE_BLK_OFFSET, SINGLE_BLK_CHARS,
+};
 
 /* for mocking of reader functions */
 #[cfg_attr(test, automock)]
@@ -35,17 +38,33 @@ pub struct Reader {
 impl ReaderTraits for Reader {
 
     fn read_uuid(&mut self) -> Result<String, ReaderError> {
-        let res = self.send_read_regex(INV_REQ, &vec![UUID_REGEX])?;
-        let raw_uuid = get_uuid(&res);
+        let raw_uuid = self.read_raw_uuid()?;
         let reversed = reverse_uuid(&raw_uuid);
         Ok(reversed)
     }
 
     fn read_single_block(&mut self, block_idx: u32) 
         -> Result<String, ReaderError> {
-        Err(ReaderError::SerialError(SerialError::NoSerialPortsFound))
+        let raw_uuid = self.read_raw_uuid()?;
+        //get the block representation in hex
+        let block_hex = format!("{:02X}", block_idx);
+        if block_hex.len() != BLOCK_CHARS {
+            return Err(ReaderError::BlockIdxTooLarge(block_idx));
+        }
+
+        let mut cmd = format!("{}{}{}{}", 
+            SINGLE_BLK_REQ, raw_uuid, block_hex, SINGLE_BLK_REQ_END);
+        
+        let raw_data = self.send_read_regex(&cmd, &vec![SINGLE_BLK_REGEX])?;
+
+        let start = raw_data.find(SINGLE_BLK_START).unwrap() + SINGLE_BLK_OFFSET;
+        let end = start + BLOCK_CHARS;
+        let data = &raw_data[start..end];
+
+        Ok(String::from(data))
     }
 
+    //TODO
     fn read_multiple_block(&mut self, block_idx: u32, num_blocks: u32) 
         -> Result<String, ReaderError> {
         Err(ReaderError::SerialError(SerialError::NoSerialPortsFound))
@@ -98,6 +117,13 @@ impl Reader {
             panic!(e.to_string());
         }
         reader
+    }
+
+    fn read_raw_uuid(&mut self) -> Result<String, ReaderError> {
+        
+        let res = self.send_read_regex(INV_REQ, &vec![UUID_REGEX])?;
+        let raw_uuid = get_uuid(&res);
+        Ok(raw_uuid)
     }
 
     //send a command, and check whether output matches any of the regex

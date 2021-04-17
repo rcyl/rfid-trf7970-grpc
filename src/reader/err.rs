@@ -9,6 +9,7 @@ pub enum ReaderError<> {
     //returns the whatever is read when no matching targets
     NoMatchingTargets(String),
     InvalidRegex(String),
+    BlockIdxTooLarge(u32)
 }
 
 impl fmt::Display for ReaderError {
@@ -24,6 +25,10 @@ impl fmt::Display for ReaderError {
             ReaderError::InvalidRegex(ref e) => {
                 let mut s = "Invalid regex: ".to_owned();
                 s.push_str(e);
+                write!(f, "{}", s.to_string())
+            },
+            ReaderError::BlockIdxTooLarge(e) => {
+                let s = format!("Block index is too large: {}", e);
                 write!(f, "{}", s.to_string())
             },
         }
