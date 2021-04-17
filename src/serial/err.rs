@@ -23,7 +23,7 @@ impl fmt::Display for SerialError {
             SerialError::NoReplyAfterMultipleTries =>
                 write!(f, "Serial device did not respond to read request \
                             after multiple tries"),            
-                SerialError::IOError(ref e) => 
+            SerialError::IOError(ref e) => 
                 std::fmt::Display::fmt(&e, f),
             SerialError::SerialError(ref e) => 
                 std::fmt::Display::fmt(&e, f),
