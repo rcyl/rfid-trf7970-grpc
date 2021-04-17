@@ -66,6 +66,9 @@ jobs:
           toolchain: stable
           override: true
           components: rustfmt, clippy
+          
+      - name: Install libudev
+        run: sudo apt-get update && sudo apt-get install libudev-dev
 
       - name: Run cargo fmt
         uses: actions-rs/cargo@v1
