@@ -17,17 +17,17 @@ static TRIES: u32 = 3;
 static SERIAL_TIMEOUT_MS: u64 = 2000;
 
 #[cfg_attr(test, automock)]
-pub trait RFIDSerialTraits: Send + Sync {
+pub trait RfidSerialTraits: Send + Sync {
     /* send and return received string */
     fn send_recv(&mut self, msg: &str) -> Result<String, SerialError>;
 }
 
-pub struct RFIDSerial {
+pub struct RfidSerial {
     port: Mutex<Box<dyn SerialPort>>,
     lib: Mutex<Box<dyn SerialCrateTraits>>,
 }
 
-impl RFIDSerialTraits for RFIDSerial {
+impl RfidSerialTraits for RfidSerial {
     fn send_recv(&mut self, cmd: &str) -> Result<String, SerialError> {
         let mut attempts = TRIES;
         while attempts > 0 {
@@ -44,8 +44,8 @@ impl RFIDSerialTraits for RFIDSerial {
     }
 }
 
-impl RFIDSerial {
-    pub fn new(lib: Box<dyn SerialCrateTraits>) -> RFIDSerial {
+impl RfidSerial {
+    pub fn new(lib: Box<dyn SerialCrateTraits>) -> RfidSerial {
         let ports = match lib.get_ports() {
             Ok(ports) => ports,
             Err(e) => {
@@ -65,8 +65,8 @@ impl RFIDSerial {
             .collect();
 
         if usb_ports.is_empty() {
-            log::error!("{}", SerialError::USBSerialNotFound);
-            panic!("{}", SerialError::USBSerialNotFound.to_string());
+            log::error!("{}", SerialError::UsbSerialNotFound);
+            panic!("{}", SerialError::UsbSerialNotFound.to_string());
         }
 
         if usb_ports.len() > 1 {
@@ -92,7 +92,7 @@ impl RFIDSerial {
             }
         };
 
-        RFIDSerial {
+        RfidSerial {
             port: Mutex::new(port),
             lib: Mutex::new(lib),
         }
@@ -164,11 +164,11 @@ mod test {
             let v: Vec<SerialPortInfo> = Vec::new();
             Ok(v)
         });
-        let _rs = RFIDSerial::new(Box::new(s));
+        let _rs = RfidSerial::new(Box::new(s));
     }
 
     #[test]
-    #[should_panic(expected = "No USB serial port found. Please ensure device is connected")]
+    #[should_panic(expected = "No Usb serial port found. Please ensure device is connected")]
     fn no_usb_serial_port() {
         let mut s = MockSerialCrateTraits::new();
         s.expect_get_ports().returning(|| {
@@ -180,7 +180,7 @@ mod test {
             Ok(v)
         });
 
-        let _rs = RFIDSerial::new(Box::new(s));
+        let _rs = RfidSerial::new(Box::new(s));
     }
 
     #[test]
@@ -199,7 +199,7 @@ mod test {
             });
             Ok(v)
         });
-        let _rs = RFIDSerial::new(Box::new(s));
+        let _rs = RfidSerial::new(Box::new(s));
     }
 
     #[test]
@@ -214,7 +214,7 @@ mod test {
             Err(e)
         });
 
-        let _rs = RFIDSerial::new(Box::new(s));
+        let _rs = RfidSerial::new(Box::new(s));
     }
 
     #[test]
@@ -237,7 +237,7 @@ mod test {
             Err(e)
         });
 
-        let _rs = RFIDSerial::new(Box::new(s));
+        let _rs = RfidSerial::new(Box::new(s));
     }
 
     //TODO: not sure how to fake a legit serial port object

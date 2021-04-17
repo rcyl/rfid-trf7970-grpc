@@ -19,16 +19,16 @@ impl fmt::Display for ReaderError {
             ReaderError::NoMatchingTargets(ref e) => {
                 let mut s = "Targets not found, recv: ".to_owned();
                 s.push_str(e);
-                write!(f, "{}", s.to_string())
+                write!(f, "{}", s)
             }
             ReaderError::InvalidRegex(ref e) => {
                 let mut s = "Invalid regex: ".to_owned();
                 s.push_str(e);
-                write!(f, "{}", s.to_string())
+                write!(f, "{}", s)
             }
             ReaderError::BlockIdxTooLarge(e) => {
                 let s = format!("Block index is too large: {}", e);
-                write!(f, "{}", s.to_string())
+                write!(f, "{}", s)
             }
         }
     }
