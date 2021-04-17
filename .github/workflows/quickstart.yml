@@ -22,6 +22,8 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+      - name: Install libudev
+        run: sudo apt-get install libudev-dev
 
       - name: Run cargo check
         uses: actions-rs/cargo@v1
