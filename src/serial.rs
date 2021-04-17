@@ -1,11 +1,11 @@
 #[cfg(test)]
 use mockall::automock;
 
-use serialport::{SerialPortInfo, SerialPortSettings};
 use serialport::prelude::*;
+use serialport::{SerialPortInfo, SerialPortSettings};
 
-use std::time::Duration;
 use std::sync::Mutex;
+use std::time::Duration;
 
 pub mod err;
 pub mod low;
@@ -19,23 +19,25 @@ static SERIAL_TIMEOUT_MS: u64 = 2000;
 #[cfg_attr(test, automock)]
 pub trait RFIDSerialTraits: Send + Sync {
     /* send and return received string */
-    fn send_recv(&mut self, msg: &str) -> Result<String, SerialError>; 
+    fn send_recv(&mut self, msg: &str) -> Result<String, SerialError>;
 }
 
 pub struct RFIDSerial {
-    port: Mutex<Box <dyn SerialPort>>,
-    lib: Mutex<Box<dyn SerialCrateTraits>>
+    port: Mutex<Box<dyn SerialPort>>,
+    lib: Mutex<Box<dyn SerialCrateTraits>>,
 }
 
 impl RFIDSerialTraits for RFIDSerial {
-
     fn send_recv(&mut self, cmd: &str) -> Result<String, SerialError> {
-
         let mut attempts = TRIES;
         while attempts > 0 {
             match self.send(cmd) {
-                Ok(recv) => { return Ok(recv); }
-                Err(_) => { attempts -= 1; }
+                Ok(recv) => {
+                    return Ok(recv);
+                }
+                Err(_) => {
+                    attempts -= 1;
+                }
             }
         }
         Err(SerialError::NoReplyAfterMultipleTries)
@@ -43,12 +45,10 @@ impl RFIDSerialTraits for RFIDSerial {
 }
 
 impl RFIDSerial {
-
     pub fn new(lib: Box<dyn SerialCrateTraits>) -> RFIDSerial {
-
         let ports = match lib.get_ports() {
-            Ok(ports) => ports, 
-            Err(e) => { 
+            Ok(ports) => ports,
+            Err(e) => {
                 //error!("{}", SerialError::SerialError(e));
                 panic!(SerialError::SerialError(e).to_string());
             }
@@ -58,10 +58,12 @@ impl RFIDSerial {
             log::error!("{}", SerialError::NoSerialPortsFound);
             panic!(SerialError::NoSerialPortsFound.to_string());
         }
-    
-        let usb_ports: Vec<&SerialPortInfo> 
-            = ports.iter().filter(|p| p.port_name.contains("USB")).collect();
-        
+
+        let usb_ports: Vec<&SerialPortInfo> = ports
+            .iter()
+            .filter(|p| p.port_name.contains("USB"))
+            .collect();
+
         if usb_ports.is_empty() {
             log::error!("{}", SerialError::USBSerialNotFound);
             panic!(SerialError::USBSerialNotFound.to_string());
@@ -83,7 +85,7 @@ impl RFIDSerial {
 
         /* try to open port */
         let port = match lib.open(&usb_ports[0].port_name, &s) {
-            Ok(port) => { port },
+            Ok(port) => port,
             Err(e) => {
                 //log::error!("{}", SerialError::SerialError(e));
                 panic!(SerialError::SerialError(e).to_string());
@@ -94,10 +96,9 @@ impl RFIDSerial {
             port: Mutex::new(port),
             lib: Mutex::new(lib),
         }
-    }   
+    }
 
     pub fn send(&mut self, msg: &str) -> Result<String, std::io::Error> {
-        
         /* let the program panic if lock fails */
         let lib = self.lib.lock().unwrap();
         let mut port = self.port.lock().unwrap();
@@ -108,11 +109,11 @@ impl RFIDSerial {
 #[cfg(test)]
 mod test {
     type Result<T> = std::result::Result<T, serialport::Error>;
-    use serialport::{SerialPortInfo, SerialPortSettings, SerialPortType, ErrorKind};
-    use mockall::mock;
-    use std::io::{Read, Write};
-    use crate::serial::low::MockSerialCrateTraits;
     use super::*;
+    use crate::serial::low::MockSerialCrateTraits;
+    use mockall::mock;
+    use serialport::{ErrorKind, SerialPortInfo, SerialPortSettings, SerialPortType};
+    use std::io::{Read, Write};
 
     mock! {
         SerialPort {}
@@ -157,91 +158,86 @@ mod test {
     #[test]
     #[should_panic(expected = "No serial ports found. Please ensure device is connected")]
     fn empty_serial_port() {
-      
         let mut s = MockSerialCrateTraits::new();
         s.expect_get_ports().returning(|| {
             //empty vector of serial ports
             let v: Vec<SerialPortInfo> = Vec::new();
             Ok(v)
         });
-        let _rs = RFIDSerial::new(Box::new(s));        
+        let _rs = RFIDSerial::new(Box::new(s));
     }
 
     #[test]
     #[should_panic(expected = "No USB serial port found. Please ensure device is connected")]
     fn no_usb_serial_port() {
-
         let mut s = MockSerialCrateTraits::new();
         s.expect_get_ports().returning(|| {
             let mut v: Vec<SerialPortInfo> = Vec::new();
-            v.push(SerialPortInfo{
-                    port_name: String::from("/dev/ttyS1"),
-                    port_type: SerialPortType::Unknown
-                });
+            v.push(SerialPortInfo {
+                port_name: String::from("/dev/ttyS1"),
+                port_type: SerialPortType::Unknown,
+            });
             Ok(v)
         });
 
-        let _rs = RFIDSerial::new(Box::new(s));          
+        let _rs = RFIDSerial::new(Box::new(s));
     }
 
     #[test]
     #[should_panic(expected = "More than one USB serial device found")]
     fn more_than_one_usb_serial_port() {
-
         let mut s = MockSerialCrateTraits::new();
         s.expect_get_ports().returning(|| {
             let mut v: Vec<SerialPortInfo> = Vec::new();
-            v.push(SerialPortInfo{
-                    port_name: String::from("/dev/USB0"),
-                    port_type: SerialPortType::Unknown
-                });
-            v.push(SerialPortInfo{
+            v.push(SerialPortInfo {
+                port_name: String::from("/dev/USB0"),
+                port_type: SerialPortType::Unknown,
+            });
+            v.push(SerialPortInfo {
                 port_name: String::from("/dev/ttyUSB1"),
-                port_type: SerialPortType::Unknown
+                port_type: SerialPortType::Unknown,
             });
             Ok(v)
         });
-        let _rs = RFIDSerial::new(Box::new(s));          
+        let _rs = RFIDSerial::new(Box::new(s));
     }
 
     #[test]
     #[should_panic(expected = "SerialPortError")]
     fn serialport_error() {
-
         let mut s = MockSerialCrateTraits::new();
         s.expect_get_ports().returning(|| {
             let e = serialport::Error {
                 kind: ErrorKind::NoDevice,
-                description: String::from("SerialPortError")
+                description: String::from("SerialPortError"),
             };
             Err(e)
         });
 
-        let _rs = RFIDSerial::new(Box::new(s));          
+        let _rs = RFIDSerial::new(Box::new(s));
     }
 
     #[test]
     #[should_panic(expected = "Failed to open")]
     fn failed_to_open() {
-
         let mut s = MockSerialCrateTraits::new();
         s.expect_get_ports().returning(|| {
             let mut v: Vec<SerialPortInfo> = Vec::new();
-            v.push(SerialPortInfo{
+            v.push(SerialPortInfo {
                 port_name: String::from("/dev/ttyUSB0"),
-                port_type: SerialPortType::Unknown
+                port_type: SerialPortType::Unknown,
             });
             Ok(v)
         });
         s.expect_open().returning(|_, _| {
             let e = serialport::Error {
                 kind: ErrorKind::NoDevice,
-                description: String::from("Failed to open")
+                description: String::from("Failed to open"),
             };
             Err(e)
         });
 
-       let _rs = RFIDSerial::new(Box::new(s));           
+        let _rs = RFIDSerial::new(Box::new(s));
     }
 
     //TODO: not sure how to fake a legit serial port object

@@ -2,7 +2,7 @@ use std::fmt;
 use std::fmt::Debug;
 
 #[derive(Debug)]
-pub enum SerialError<> {
+pub enum SerialError {
     NoSerialPortsFound,
     USBSerialNotFound,
     MultipleSerialPorts,
@@ -14,19 +14,22 @@ pub enum SerialError<> {
 impl fmt::Display for SerialError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
-            SerialError::NoSerialPortsFound =>
-                write!(f, "No serial ports found. Please ensure device is connected"),
-            SerialError::USBSerialNotFound =>
-                write!(f, "No USB serial port found. Please ensure device is connected"),
-            SerialError::MultipleSerialPorts =>
-                write!(f, "More than one USB serial device found"),
-            SerialError::NoReplyAfterMultipleTries =>
-                write!(f, "Serial device did not respond to read request \
-                            after multiple tries"),            
-            SerialError::IOError(ref e) => 
-                std::fmt::Display::fmt(&e, f),
-            SerialError::SerialError(ref e) => 
-                std::fmt::Display::fmt(&e, f),
+            SerialError::NoSerialPortsFound => write!(
+                f,
+                "No serial ports found. Please ensure device is connected"
+            ),
+            SerialError::USBSerialNotFound => write!(
+                f,
+                "No USB serial port found. Please ensure device is connected"
+            ),
+            SerialError::MultipleSerialPorts => write!(f, "More than one USB serial device found"),
+            SerialError::NoReplyAfterMultipleTries => write!(
+                f,
+                "Serial device did not respond to read request \
+                            after multiple tries"
+            ),
+            SerialError::IOError(ref e) => std::fmt::Display::fmt(&e, f),
+            SerialError::SerialError(ref e) => std::fmt::Display::fmt(&e, f),
         }
     }
 }
@@ -42,4 +45,3 @@ impl From<serialport::Error> for SerialError {
         SerialError::SerialError(err)
     }
 }
-    

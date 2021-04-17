@@ -3,7 +3,7 @@ pub const AGC_RES: &'static str = "AGC Toggle";
 pub const AGC_RES_2: &'static str = AGC;
 
 pub const AM: &'static str = "0109000304F1FF0000";
-pub const AM_RES: &'static str ="AM PM Toggle";
+pub const AM_RES: &'static str = "AM PM Toggle";
 pub const AM_RES_2: &'static str = AM;
 
 pub const EXT_ANT: &'static str = "01080003042B0000";
@@ -26,8 +26,8 @@ pub const SINGLE_BLK_REQ: &'static str = "0113000304182220";
 pub const SINGLE_BLK_REQ_END: &'static str = "0000";
 pub const _SINGLE_BLK_REQ_ANS: &'static str = "Request mode.";
 pub const SINGLE_BLK_START: &'static str = "[";
-pub const SINGLE_BLK_OFFSET: usize = 3; 
-pub const SINGLE_BLK_CHARS: usize = 8; 
+pub const SINGLE_BLK_OFFSET: usize = 3;
+pub const SINGLE_BLK_CHARS: usize = 8;
 
 pub const UUID_START: &'static str = "E0";
 pub const UUID_CHARS: usize = 16;
