@@ -29,5 +29,9 @@ message UUIDPayload {
 }
 
 message SingleBlockRequest {
-    uint32 blockIndex = 1
+    uint32 blockIndex = 1;
+}
+
+message Empty {
+
 }
