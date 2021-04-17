@@ -7,7 +7,7 @@ use serialport::prelude::*;
 use std::time::Duration;
 use std::sync::Mutex;
 
-mod err;
+pub mod err;
 mod low;
 
 use err::SerialError;

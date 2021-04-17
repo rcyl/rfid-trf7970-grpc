@@ -1,5 +1,6 @@
 
-pub mod serial;
+mod serial;
+mod reader;
 
 fn main() {
 
